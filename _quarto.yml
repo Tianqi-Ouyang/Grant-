@@ -3,15 +3,18 @@ project:
   output-dir: docs
   render:
     - index.qmd
+    - qmd/leyre_grant.qmd
   post-render:
     - python3 scripts/inject_pptx_links.py
 
 website:
-  title: "Grant Figures — Sherley Carboplatin Cohort"
+  title: "Grant Figures"
   navbar:
     left:
       - href: index.qmd
         text: Grant
+      - href: qmd/leyre_grant.qmd
+        text: Leyre project grant
 
 format:
   html:

@@ -96,5 +96,47 @@
     "title": "Sherley Project — Grant Figures",
     "section": "7.3 Adjusted CIF — Excess Dose ≥ +10 % vs Others (Platinum-Related Hospitalisation)",
     "text": "7.3 Adjusted CIF — Excess Dose ≥ +10 % vs Others (Platinum-Related Hospitalisation)\nStandardized cumulative incidence contrasting patients whose administered dose was ≥ 10 % above the eGFRCR-CYS-predicted dose (red, “excess”) against all other patients (blue). Same Fine-Gray model, adjusters (age, sex, ecog_score, ici, cockcroft) and g-computation as §6; death is the competing event.\n\n\nCode\nadj_cif_binary(\"cmp_time_side_effect\", \"cmp_status_side_effect\",\n               NULL, \"Platinum-Related Hospitalisation — excess dose ≥ +10 % vs others\",\n               expo_var = \"dose_pct_ge10\",\n               lab_exp  = \"Dose discrepancy ≥ +10 % (excess)\",\n               lab_ref  = \"Dose discrepancy &lt; +10 % (others)\",\n               sub_exp  = \"Excess dose ≥ +10%\")"
+  },
+  {
+    "objectID": "qmd/leyre_grant.html",
+    "href": "qmd/leyre_grant.html",
+    "title": "Leyre Project Grant — Carboplatin Overdosing vs eGFRcr-cys / Cockcroft-Gault Discordance",
+    "section": "",
+    "text": "A focused, grant-ready cut of the OncoGFR 1200 analysis (Leyre project). The cohort and the full exploratory analysis live on the Leyre project site; patient-level data is read by absolute path from that project and is never copied into this repository.\nThe discordance index on the x-axis here is the same quantity as egfr_difference on the Sherley carboplatin page of this site — (eGFRcr-cys − Cockcroft-Gault) / Cockcroft-Gault × 100, both in absolute mL/min — measured in a different cohort, and the −10 % marker is the same cutoff. Four figures:\n\nFigure 1 — the probability that carboplatin (Calvert AUC 5, ±20 % band) is overdosed relative to measured GFR, as a smooth function of the eGFR discordance index. One line only (red), one panel per eGFR dosing equation.\nFigure 2 — how the 1,200 participants are distributed across that same discordance index.\nFigure 3 — the two superimposed: overdose curve over the cohort distribution.\nFigure 4 — overdose risk at 10 %, 15 % and 20 %, by frailty and cachexia.\n\n\n\n\\[\n\\text{eGFR \\% difference} \\;=\\; \\frac{\\text{eGFR}_{\\text{cr-cys}} - \\text{CrCl}_{\\text{Cockcroft-Gault}}}{\\text{CrCl}_{\\text{Cockcroft-Gault}}} \\times 100\n\\]\nBoth terms are on the absolute mL/min scale (actual body surface area, not indexed to 1.73 m²), i.e. CKDEPIcrcys21non_index and CGnon_index. eGFRcr-cys is the CKD-EPI 2021 creatinine–cystatin C equation.\nNegative = cystatin-informed eGFR reads below Cockcroft-Gault, i.e. Cockcroft-Gault is flattering the kidney → the patient is at risk of receiving too much drug. Positive = the reverse.\n\n\n\nCarboplatin is dosed by the Calvert formula at AUC 5. A patient is overdosed when the dose computed from the estimating equation exceeds the dose that measured GFR (⁵¹Cr-EDTA) would have given by more than 20 %:\n\\[5\\,(\\text{eGFR} + 25) \\;&gt;\\; 6\\,(\\text{mGFR} + 25)\\]\nMeasured GFR is the gold standard throughout. Each panel title names the equation used to pick the dose; the x-axis discordance index is the same in every panel."
+  },
+  {
+    "objectID": "qmd/leyre_grant.html#the-x-axis-jiaxuan-definition",
+    "href": "qmd/leyre_grant.html#the-x-axis-jiaxuan-definition",
+    "title": "Leyre Project Grant — Carboplatin Overdosing vs eGFRcr-cys / Cockcroft-Gault Discordance",
+    "section": "",
+    "text": "\\[\n\\text{eGFR \\% difference} \\;=\\; \\frac{\\text{eGFR}_{\\text{cr-cys}} - \\text{CrCl}_{\\text{Cockcroft-Gault}}}{\\text{CrCl}_{\\text{Cockcroft-Gault}}} \\times 100\n\\]\nBoth terms are on the absolute mL/min scale (actual body surface area, not indexed to 1.73 m²), i.e. CKDEPIcrcys21non_index and CGnon_index. eGFRcr-cys is the CKD-EPI 2021 creatinine–cystatin C equation.\nNegative = cystatin-informed eGFR reads below Cockcroft-Gault, i.e. Cockcroft-Gault is flattering the kidney → the patient is at risk of receiving too much drug. Positive = the reverse."
+  },
+  {
+    "objectID": "qmd/leyre_grant.html#the-y-axis",
+    "href": "qmd/leyre_grant.html#the-y-axis",
+    "title": "Leyre Project Grant — Carboplatin Overdosing vs eGFRcr-cys / Cockcroft-Gault Discordance",
+    "section": "",
+    "text": "Carboplatin is dosed by the Calvert formula at AUC 5. A patient is overdosed when the dose computed from the estimating equation exceeds the dose that measured GFR (⁵¹Cr-EDTA) would have given by more than 20 %:\n\\[5\\,(\\text{eGFR} + 25) \\;&gt;\\; 6\\,(\\text{mGFR} + 25)\\]\nMeasured GFR is the gold standard throughout. Each panel title names the equation used to pick the dose; the x-axis discordance index is the same in every panel."
+  },
+  {
+    "objectID": "qmd/leyre_grant.html#absolute-mlmin-actual-bsa-primary",
+    "href": "qmd/leyre_grant.html#absolute-mlmin-actual-bsa-primary",
+    "title": "Leyre Project Grant — Carboplatin Overdosing vs eGFRcr-cys / Cockcroft-Gault Discordance",
+    "section": "Absolute mL/min (actual BSA) — primary",
+    "text": "Absolute mL/min (actual BSA) — primary\nThis is the scale the Calvert formula requires, and it matches the x-axis definition.\n\nCode\nemit_plots(lapply(reg$equation, function(eq) grant_loess(carbo_nonindex, eq, \"Overdose\")),\n           \"grant_carbo_pctdiffcg_nonindexed_overdose\")\n\n\n&lt;U+2B07&gt;&lt;U+FE0F&gt; Download these panels as PowerPoint (editable)"
+  },
+  {
+    "objectID": "qmd/leyre_grant.html#indexed-mlmin1.73-m²-secondary",
+    "href": "qmd/leyre_grant.html#indexed-mlmin1.73-m²-secondary",
+    "title": "Leyre Project Grant — Carboplatin Overdosing vs eGFRcr-cys / Cockcroft-Gault Discordance",
+    "section": "Indexed (mL/min/1.73 m²) — secondary",
+    "text": "Indexed (mL/min/1.73 m²) — secondary\nSame figure with the dosing classification computed on the indexed GFR scale. The x-axis is unchanged (still absolute mL/min, as specified).\n\nCode\nemit_plots(lapply(reg$equation, function(eq) grant_loess(carbo_index, eq, \"Overdose\")),\n           \"grant_carbo_pctdiffcg_indexed_overdose\")\n\n\n&lt;U+2B07&gt;&lt;U+FE0F&gt; Download these panels as PowerPoint (editable)"
+  },
+  {
+    "objectID": "qmd/leyre_grant.html#the-same-curve-as-numbers",
+    "href": "qmd/leyre_grant.html#the-same-curve-as-numbers",
+    "title": "Leyre Project Grant — Carboplatin Overdosing vs eGFRcr-cys / Cockcroft-Gault Discordance",
+    "section": "The same curve as numbers",
+    "text": "The same curve as numbers\nThe LOESS panels above in citable form: the observed carboplatin (±20 %) overdose rate within bands of the discordance index, for the two creatinine-based equations a clinic would actually dose from. Absolute mL/min scale, measured GFR as reference.\n\n\nCode\nBANDS &lt;- c(-Inf, -30, -20, -10, 0, 10, Inf)\nBAND_LABS &lt;- c(\"&lt; −30 %\", \"−30 to −20 %\", \"−20 to −10 %\", \"−10 to 0 %\",\n               \"0 to +10 %\", \"&gt; +10 %\")\n\nstratum_tbl &lt;- carbo_nonindex %&gt;%\n  dplyr::filter(equation %in% c(\"CG\", \"CKDEPIcr21\"), !is.na(cls),\n                !is.na(egfr_pctdiff_cg)) %&gt;%\n  dplyr::mutate(\n    band = cut(egfr_pctdiff_cg, BANDS, labels = BAND_LABS, right = FALSE),\n    eqn  = factor(equation, levels = c(\"CG\", \"CKDEPIcr21\"),\n                  labels = c(\"Cockcroft-Gault\", \"CKD-EPI Cr 2021\"))) %&gt;%\n  dplyr::group_by(eqn, band) %&gt;%\n  dplyr::summarise(N = dplyr::n(),\n                   over = sum(cls == \"Overdose\"), .groups = \"drop\") %&gt;%\n  dplyr::mutate(pct = sprintf(\"%.1f%%\", over / N * 100)) %&gt;%\n  dplyr::select(eqn, band, N, over, pct) %&gt;%\n  tidyr::pivot_wider(names_from = eqn, values_from = c(over, pct),\n                     names_glue = \"{eqn}_{.value}\") %&gt;%\n  # pivot_wider orders columns by VALUE (both n's, then both %'s). Regroup them\n  # by EQUATION so the \"Dosed by ...\" header spanners sit over the right pairs.\n  dplyr::select(band, N,\n                `Cockcroft-Gault_over`, `Cockcroft-Gault_pct`,\n                `CKD-EPI Cr 2021_over`, `CKD-EPI Cr 2021_pct`) %&gt;%\n  dplyr::rename(`eGFR % difference` = band)\n\nstratum_tbl %&gt;%\n  flextable::flextable() %&gt;%\n  flextable::set_header_labels(\n    `Cockcroft-Gault_over` = \"n overdosed\", `Cockcroft-Gault_pct` = \"% overdosed\",\n    `CKD-EPI Cr 2021_over` = \"n overdosed\", `CKD-EPI Cr 2021_pct` = \"% overdosed\") %&gt;%\n  flextable::add_header_row(\n    values = c(\"\", \"\", \"Dosed by Cockcroft-Gault\", \"Dosed by CKD-EPI Cr 2021\"),\n    colwidths = c(1, 1, 2, 2)) %&gt;%\n  flextable::align(i = 1, part = \"header\", align = \"center\") %&gt;%\n  flextable::bold(part = \"header\") %&gt;%\n  flextable::autofit()\n\n\nDosed by Cockcroft-GaultDosed by CKD-EPI Cr 2021eGFR % differenceNn overdosed% overdosedn overdosed% overdosed&lt; −30 %796278.5%2632.9%−30 to −20 %1399467.6%4633.1%−20 to −10 %2309240.0%6829.6%−10 to 0 %2745219.0%5620.4%0 to +10 %2272511.0%5926.0%&gt; +10 %25131.2%3815.1%"
   }
 ]
