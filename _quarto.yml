@@ -1,0 +1,31 @@
+project:
+  type: website
+  output-dir: docs
+  render:
+    - index.qmd
+  post-render:
+    - python3 scripts/inject_pptx_links.py
+
+website:
+  title: "Grant Figures — Sherley Carboplatin Cohort"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Grant
+
+format:
+  html:
+    theme: lumen
+    toc: true
+    toc-depth: 4
+    code-fold: true
+
+execute:
+  eval: false
+  warning: false
+  message: false
+  error: true
+
+knitr:
+  opts_knit:
+    root.dir: "/Users/to909/Desktop/Meg/Grant-"

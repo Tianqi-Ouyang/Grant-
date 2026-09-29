@@ -1,0 +1,79 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Sherley Project — Grant Figures",
+    "section": "",
+    "text": "Grant-figure versions of the Carboplatin Cohort analyses, re-expressed on the eGFR difference scale.\n\\[\n\\text{eGFR difference (\\%)} \\;=\\; \\frac{\\text{eGFR}_{\\text{CR-CYS}} - \\text{CrCl}_{\\text{CG}}}{\\text{CrCl}_{\\text{CG}}} \\times 100\n\\]\nBoth terms in the numerator are in mL/min: the CKD-EPI creatinine–cystatin C eGFR is the version adjusted for actual body surface area (ckd_epi_gfr_cre_cys_unindex, mL/min — not the 1.73 m²-indexed ckd_epi_gfr_cre_cys), matching the units of Cockcroft-Gault creatinine clearance. The result is expressed as a percentage: 0 % means the two estimators agree, +20 % means CKD-EPI Cr-Cys is 20 % higher than Cockcroft-Gault, −20 % means 20 % lower.\n\n\n\n\n\n\nNoteRelationship to the eGFR ratio used on the Carboplatin page\n\n\n\nBecause egfr_difference = 100 × ((eGFR − CG) / CG) = 100 × (egfr_ratio − 1), this is a pure re-centring and rescaling of the eGFR ratio: the reference point moves from 1 to 0 %. The underlying Fine-Gray fits are therefore the same models as §9 of the Sherley project’s Carboplatin Cohort page — identical p-values. The reported subHRs differ only because this page reports them per 10 % decrease in eGFR difference, whereas §9 reports per 0.1-unit increase in the ratio; the two are reciprocals of each other.\n\n\n\n\nCode\n# Force UTF-8 locale so captions and other strings render real Unicode\n# (e.g. em-dash) instead of &lt;U+2014&gt; escape sequences.\ninvisible(Sys.setlocale(\"LC_ALL\", \"en_US.UTF-8\"))\nlibrary(tidyverse)\nlibrary(scales)\nlibrary(ggplot2)\nlibrary(tidycmprsk)\nlibrary(ggsurvfit)\nlibrary(gtsummary)\nlibrary(officer)\nlibrary(rvg)\n\n# Output directory for downloadable PowerPoint plots (plots/grant/&lt;name&gt;.pptx).\npptx_dir &lt;- normalizePath(\"docs/plots/grant\", winslash = \"/\", mustWork = FALSE)\ndir.create(pptx_dir, recursive = TRUE, showWarnings = FALSE)\n\n# Save the given ggplot as an editable PowerPoint slide via rvg::dml, named by\n# the calling chunk's label. Mirrors the helper in the Sherley project's\n# sherley_carbo.qmd; the\n# post-render script scripts/inject_pptx_links.py then injects a per-plot\n# download link beneath each figure in the rendered HTML.\n.save_plot_pptx &lt;- function(p, name = NULL) {\n  if (is.null(p) || !inherits(p, \"ggplot\")) return(invisible(NULL))\n  if (is.null(name)) {\n    name &lt;- tryCatch(knitr::opts_current$get(\"label\"), error = function(e) NULL)\n  }\n  if (is.null(name)) return(invisible(NULL))\n  safe &lt;- gsub(\"[^A-Za-z0-9]+\", \"_\", name)\n  out  &lt;- file.path(pptx_dir, paste0(safe, \".pptx\"))\n  ok &lt;- tryCatch({\n    pp &lt;- officer::read_pptx()\n    pp &lt;- officer::add_slide(pp, layout = \"Title and Content\", master = \"Office Theme\")\n    pp &lt;- officer::ph_with(\n      pp,\n      value = rvg::dml(ggobj = p),\n      location = officer::ph_location_type(type = \"body\")\n    )\n    print(pp, target = out)\n    TRUE\n  }, error = function(e) FALSE)\n  invisible(if (ok) paste0(\"plots/grant/\", safe, \".pptx\") else NULL)\n}\n\n# Format the exposure-effect subtitle: subHR (or HR) per `scale` units with\n# 95% Wald CI and p-value, extracted from the Fine-Gray / Cox PH fit.\n.hr_subtitle &lt;- function(beta, V_beta, scale = 1,\n                         hr_type = \"subHR\",\n                         unit_label = \"per 1-unit increase\") {\n  se   &lt;- sqrt(V_beta)\n  hr   &lt;- exp(beta * scale)\n  b1   &lt;- exp((beta - 1.96 * se) * scale)\n  b2   &lt;- exp((beta + 1.96 * se) * scale)\n  # A negative `scale` (reporting per unit DECREASE) reverses the bound order,\n  # so sort rather than assuming b1 &lt;= b2.\n  lcl  &lt;- min(b1, b2)\n  ucl  &lt;- max(b1, b2)\n  pval &lt;- 2 * (1 - pnorm(abs(beta / se)))\n  p_str &lt;- ifelse(pval &lt; 0.001, \"&lt;0.001\", sprintf(\"%.3f\", pval))\n  sprintf(\"%s = %.2f (95%% CI %.2f-%.2f), p = %s   (%s)\",\n          hr_type, hr, lcl, ucl, p_str, unit_label)\n}\n\n# Placeholder for outcomes whose design matrix is singular on this sub-cohort.\n.plot_failed &lt;- function(label = \"Model could not be fit\") {\n  p &lt;- ggplot() +\n    annotate(\"text\", x = 0.5, y = 0.5,\n             label = paste0(label, \"\\n(singular design — cohort too small)\"),\n             size = 3.5) +\n    coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +\n    theme_void()\n  .save_plot_pptx(p)\n  p\n}\n\n# Analysis data is produced by the Sherley project's data pipeline\n# (Sherley/qmd/sherley_data.qmd writes this file). Load the whole cohort, then\n# keep only carboplatin patients.\nsherley_rds &lt;- \"/Users/to909/Desktop/Meg/Sherley/sherley_final_master.rds\"\ndat &lt;- readRDS(sherley_rds) %&gt;%\n  filter(platin_group == \"Carboplatin\")\n\ndat &lt;- dat %&gt;%\n  mutate(\n    # BSA-adjusted CKD-EPI Cr-Cys (mL/min) vs Cockcroft-Gault CrCl (mL/min).\n    # Relative difference expressed as a PERCENT; 0 % = the two estimators agree.\n    egfr_difference = 100 * (ckd_epi_gfr_cre_cys_unindex - cockcroft) / cockcroft\n  )\n\ncat(\"Carboplatin cohort N =\", nrow(dat), \"\\n\")\n\n\nCarboplatin cohort N = 121 \n\n\nCode\ncat(\"eGFR difference available for N =\", sum(!is.na(dat$egfr_difference)), \"\\n\")\n\n\neGFR difference available for N = 121"
+  },
+  {
+    "objectID": "index.html#anemia-grade-2",
+    "href": "index.html#anemia-grade-2",
+    "title": "Sherley Project — Grant Figures",
+    "section": "5.1 Anemia Grade 2",
+    "text": "5.1 Anemia Grade 2\n\n\nCode\nplot_subhr_linear_diff(\"cmp_time_anemia_2\", \"cmp_status_anemia_2\",\n                       \"pre_HGB_45days\", \"Anemia Grade 2 (Carboplatin)\")"
+  },
+  {
+    "objectID": "index.html#anemia-grade-3",
+    "href": "index.html#anemia-grade-3",
+    "title": "Sherley Project — Grant Figures",
+    "section": "5.2 Anemia Grade 3",
+    "text": "5.2 Anemia Grade 3\n\n\nCode\nplot_subhr_linear_diff(\"cmp_time_anemia_3\", \"cmp_status_anemia_3\",\n                       \"pre_HGB_45days\", \"Anemia Grade 3 (Carboplatin)\")"
+  },
+  {
+    "objectID": "index.html#thrombocytopenia-grade-2",
+    "href": "index.html#thrombocytopenia-grade-2",
+    "title": "Sherley Project — Grant Figures",
+    "section": "5.3 Thrombocytopenia Grade 2",
+    "text": "5.3 Thrombocytopenia Grade 2\n\n\nCode\nplot_subhr_linear_diff(\"cmp_time_throm_2\", \"cmp_status_throm_2\",\n                       \"pre_PLT_45days\", \"Thrombocytopenia Grade 2 (Carboplatin)\")"
+  },
+  {
+    "objectID": "index.html#thrombocytopenia-grade-3",
+    "href": "index.html#thrombocytopenia-grade-3",
+    "title": "Sherley Project — Grant Figures",
+    "section": "5.4 Thrombocytopenia Grade 3",
+    "text": "5.4 Thrombocytopenia Grade 3\n\n\nCode\nplot_subhr_linear_diff(\"cmp_time_throm_3\", \"cmp_status_throm_3\",\n                       \"pre_PLT_45days\", \"Thrombocytopenia Grade 3 (Carboplatin)\")"
+  },
+  {
+    "objectID": "index.html#aki-grade-2",
+    "href": "index.html#aki-grade-2",
+    "title": "Sherley Project — Grant Figures",
+    "section": "5.5 AKI Grade 2",
+    "text": "5.5 AKI Grade 2\n\n\nCode\nplot_subhr_linear_diff(\"cmp_time_aki_2\", \"cmp_status_aki_2\",\n                       NULL, \"AKI Grade 2 (Carboplatin)\")"
+  },
+  {
+    "objectID": "index.html#aki-kdigo",
+    "href": "index.html#aki-kdigo",
+    "title": "Sherley Project — Grant Figures",
+    "section": "5.6 AKI (KDIGO)",
+    "text": "5.6 AKI (KDIGO)\n\n\nCode\nplot_subhr_linear_diff(\"cmp_time_aki_kdigo\", \"cmp_status_aki_kdigo\",\n                       NULL, \"AKI (KDIGO) (Carboplatin)\")"
+  },
+  {
+    "objectID": "index.html#composite-grade-2-aes",
+    "href": "index.html#composite-grade-2-aes",
+    "title": "Sherley Project — Grant Figures",
+    "section": "5.7 Composite Grade 2 AEs",
+    "text": "5.7 Composite Grade 2 AEs\n\n\nCode\nplot_subhr_linear_diff(\"cmp_time_grade_2_aes\", \"cmp_status_grade_2_aes\",\n                       c(\"pre_HGB_45days\", \"pre_PLT_45days\"),\n                       \"Composite Grade 2 AEs (Carboplatin)\")"
+  },
+  {
+    "objectID": "index.html#composite-grade-3-aes",
+    "href": "index.html#composite-grade-3-aes",
+    "title": "Sherley Project — Grant Figures",
+    "section": "5.8 Composite Grade 3 AEs",
+    "text": "5.8 Composite Grade 3 AEs\n\n\nCode\nplot_subhr_linear_diff(\"cmp_time_grade_3_aes\", \"cmp_status_grade_3_aes\",\n                       c(\"pre_HGB_45days\", \"pre_PLT_45days\"),\n                       \"Composite Grade 3 AEs (Carboplatin)\")"
+  },
+  {
+    "objectID": "index.html#overall-hospitalization",
+    "href": "index.html#overall-hospitalization",
+    "title": "Sherley Project — Grant Figures",
+    "section": "5.9 Overall Hospitalization",
+    "text": "5.9 Overall Hospitalization\n\n\nCode\nplot_subhr_linear_diff(\"cmp_time_any_hosp\", \"cmp_status_any_hosp\",\n                       NULL, \"Overall Hospitalization (Carboplatin)\")"
+  },
+  {
+    "objectID": "index.html#platinum-related-hospitalization",
+    "href": "index.html#platinum-related-hospitalization",
+    "title": "Sherley Project — Grant Figures",
+    "section": "5.10 Platinum-Related Hospitalization",
+    "text": "5.10 Platinum-Related Hospitalization\n\n\nCode\nplot_subhr_linear_diff(\"cmp_time_side_effect\", \"cmp_status_side_effect\",\n                       NULL, \"Platinum-Related Hospitalization (Carboplatin)\")"
+  }
+]

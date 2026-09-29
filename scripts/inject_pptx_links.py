@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""
+Post-render hook for the Grant Quarto site.
+
+After `quarto render`, scan every rendered HTML page under docs/ for
+<img src="..._files/figure-html/<chunk-label>-N.png"> figures, and inject
+an editable-PowerPoint download link immediately below the image when a
+matching pptx exists under docs/plots/<subdir>/.
+
+Mapping rule (matches .save_plot_pptx in the qmd setup chunk):
+  chunk_label = strip trailing "-<digits>.png" from the PNG basename
+  pptx_slug   = chunk_label with [^A-Za-z0-9]+ collapsed to "_"
+  pptx_file   = docs/plots/<subdir>/<pptx_slug>.pptx
+
+Links are written relative to each page's own folder, so pages can live at
+the site root (index.html) or in subfolders.
+
+Idempotent: pages that already carry a pptx-link div are left alone, so
+re-running the script never duplicates links.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DOCS = ROOT / "docs"
+PLOTS_ROOT = DOCS / "plots"
+
+IMG_RE = re.compile(
+    r'<img\s+src="([^"]*figure-html/[^"]+?\.png)"[^>]*?/?>',
+    flags=re.IGNORECASE,
+)
+LINK_DIV_TMPL = (
+    '\n<div class="pptx-link" '
+    'style="margin:-0.5em 0 1.3em 0;font-size:0.85em;text-align:center;">'
+    '<a href="{href}" download>📥 Download editable PowerPoint</a>'
+    '</div>\n'
+)
+
+
+def slugify(label: str) -> str:
+    return re.sub(r"[^A-Za-z0-9]+", "_", label)
+
+
+def build_pptx_map() -> dict[str, Path]:
+    """Map pptx slug -> pptx file path."""
+    mapping: dict[str, Path] = {}
+    if not PLOTS_ROOT.is_dir():
+        return mapping
+    for subdir in sorted(p for p in PLOTS_ROOT.iterdir() if p.is_dir()):
+        for pptx in sorted(subdir.glob("*.pptx")):
+            mapping[pptx.stem] = pptx
+    return mapping
+
+
+def inject(html: str, pptx_map: dict[str, Path], page_dir: Path) -> tuple[str, int]:
+    n_added = 0
+
+    def replace(m: re.Match[str]) -> str:
+        nonlocal n_added
+        img_tag = m.group(0)
+        src = m.group(1)
+        # Strip trailing "-<digits>.png" to recover the chunk label
+        fname = os.path.basename(src)
+        m2 = re.match(r"(.+?)-\d+\.png$", fname)
+        if not m2:
+            return img_tag
+        pptx = pptx_map.get(slugify(m2.group(1)))
+        if pptx is None:
+            return img_tag
+        href = Path(os.path.relpath(pptx, page_dir)).as_posix()
+        n_added += 1
+        return img_tag + LINK_DIV_TMPL.format(href=href)
+
+    new_html = IMG_RE.sub(replace, html)
+    return new_html, n_added
+
+
+def main() -> None:
+    pptx_map = build_pptx_map()
+    if not pptx_map:
+        print("[inject_pptx_links] no .pptx files under docs/plots/ — skipping.")
+        return
+
+    pages = sorted(p for p in DOCS.rglob("*.html") if "site_libs" not in p.parts)
+    if not pages:
+        print("[inject_pptx_links] no rendered pages under docs/ — skipping.")
+        return
+
+    for page in pages:
+        text = page.read_text(encoding="utf-8")
+        if 'class="pptx-link"' in text:
+            print(f"[inject_pptx_links] {page.relative_to(ROOT)}: already injected — skipping.")
+            continue
+        new_text, n = inject(text, pptx_map, page.parent)
+        if n > 0:
+            page.write_text(new_text, encoding="utf-8")
+        print(f"[inject_pptx_links] {page.relative_to(ROOT)}: +{n} pptx link(s)")
+
+
+if __name__ == "__main__":
+    main()

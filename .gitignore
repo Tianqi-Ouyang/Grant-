@@ -1,0 +1,16 @@
+.DS_Store
+*.html
+!docs/**/*.html
+*.xlsx
+*.xls
+*.pdf
+*.rds
+Data/
+*.csv
+/.quarto/
+**/*.quarto_ipynb
+render.log
+_freeze/
+.Rhistory
+.RData
+.Rproj.user/
